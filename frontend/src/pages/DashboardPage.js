@@ -1,0 +1,360 @@
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Typography,
+  Box,
+  Grid,
+  TextField,
+  InputAdornment,
+  IconButton,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Alert,
+  Paper,
+  Button,
+  Fade,
+  useTheme
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import WorkIcon from '@mui/icons-material/Work';
+import BusinessIcon from '@mui/icons-material/Business';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import { getRoles, getTools } from '../services/api';
+
+// Helper function to parse query parameters
+const useQuery = () => {
+  return new URLSearchParams(useLocation().search);
+};
+
+const DashboardPage = () => {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const query = useQuery();
+  const searchParam = query.get('search');
+
+  const [searchQuery, setSearchQuery] = useState(searchParam || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [searchType, setSearchType] = useState('text'); // 'text' or 'vector'
+  const [roles, setRoles] = useState([]);
+  const [tools, setTools] = useState([]);
+  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedTool, setSelectedTool] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Fetch roles and tools for filters on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch roles and tools for filters
+        const rolesData = await getRoles();
+        const toolsData = await getTools();
+        setRoles(rolesData);
+        setTools(toolsData);
+      } catch (err) {
+        setError('Failed to fetch filter data. Please try again later.');
+        console.error(err);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    
+    if (searchQuery.trim()) {
+      // When searching from dashboard, navigate to homepage with search query
+      navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleRoleChange = (event) => {
+    setSelectedRole(event.target.value);
+  };
+
+  const handleToolChange = (event) => {
+    setSelectedTool(event.target.value);
+  };
+
+  const toggleFilter = () => {
+    setFilterOpen(!filterOpen);
+  };
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 8, mb: 8 }} className="fade-in">
+      <Box sx={{ mb: 6, textAlign: 'center' }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          fontWeight="600" 
+          className="section-heading"
+          sx={{ color: theme.palette.text.primary, mb: 2 }}
+        >
+          Staff Search Dashboard
+        </Typography>
+        <Typography 
+          variant="body1" 
+          color="text.secondary" 
+          sx={{ maxWidth: 700, mx: 'auto' }}
+        >
+          Find staff profiles across the organization using advanced search options.
+        </Typography>
+      </Box>
+        
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: 3, 
+          mb: 4, 
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: theme.palette.divider,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+          background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+        }}
+      >
+        <form onSubmit={handleSearch}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={6} lg={5}>
+              <TextField
+                fullWidth
+                placeholder="Search by name, skill, or keywords..."
+                variant="outlined"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 3,
+                    '&.Mui-focused': {
+                      boxShadow: '0 0 0 3px rgba(22, 160, 133, 0.1)',
+                    },
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton 
+                        size="small"
+                        onClick={() => setSearchQuery('')}
+                      >
+                        <Chip 
+                          label="Clear" 
+                          size="small"
+                          onDelete={() => setSearchQuery('')}
+                        />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3} lg={3}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="search-type-label">Search Method</InputLabel>
+                <Select
+                  labelId="search-type-label"
+                  value={searchType}
+                  onChange={(e) => setSearchType(e.target.value)}
+                  label="Search Method"
+                  sx={{
+                    borderRadius: 3,
+                    '&.Mui-focused': {
+                      boxShadow: '0 0 0 3px rgba(22, 160, 133, 0.1)',
+                    },
+                  }}
+                >
+                  <MenuItem value="text">Text-based Search</MenuItem>
+                  <MenuItem value="vector">Semantic AI Search</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6} md={2} lg={2}>
+              <Button 
+                type="submit" 
+                variant="contained" 
+                fullWidth
+                sx={{ 
+                  borderRadius: 3,
+                  py: 1.5,
+                  boxShadow: '0 4px 10px rgba(44, 62, 80, 0.15)',
+                }}
+              >
+                Search
+              </Button>
+            </Grid>
+            <Grid item xs={6} md={1} lg={2}>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={toggleFilter}
+                sx={{ 
+                  borderRadius: 3,
+                  py: 1.5,
+                  width: '100%',
+                  borderColor: theme.palette.divider,
+                }}
+                startIcon={<FilterListIcon />}
+              >
+                {filterOpen ? 'Hide' : 'Filters'}
+              </Button>
+            </Grid>
+          </Grid>
+          
+          <Fade in={filterOpen}>
+            <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${theme.palette.divider}` }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="role-filter-label">Filter by Role</InputLabel>
+                    <Select
+                      labelId="role-filter-label"
+                      value={selectedRole}
+                      onChange={handleRoleChange}
+                      label="Filter by Role"
+                      sx={{ borderRadius: 3 }}
+                      startAdornment={<WorkIcon color="action" sx={{ ml: 1, mr: 1 }} />}
+                    >
+                      <MenuItem value="">
+                        <em>All Roles</em>
+                      </MenuItem>
+                      {roles.map((role) => (
+                        <MenuItem key={role} value={role}>
+                          {role}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="tool-filter-label">Filter by Skill</InputLabel>
+                    <Select
+                      labelId="tool-filter-label"
+                      value={selectedTool}
+                      onChange={handleToolChange}
+                      label="Filter by Skill"
+                      sx={{ borderRadius: 3 }}
+                      startAdornment={<BusinessIcon color="action" sx={{ ml: 1, mr: 1 }} />}
+                    >
+                      <MenuItem value="">
+                        <em>All Skills</em>
+                      </MenuItem>
+                      {tools.map((tool) => (
+                        <MenuItem key={tool} value={tool}>
+                          {tool}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+              
+              {(selectedRole || selectedTool) && (
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="body2" sx={{ mr: 1, color: 'text.secondary' }}>
+                    Active filters:
+                  </Typography>
+                  {selectedRole && (
+                    <Chip 
+                      label={`Role: ${selectedRole}`} 
+                      onDelete={() => setSelectedRole('')} 
+                      size="small" 
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedTool && (
+                    <Chip 
+                      label={`Skill: ${selectedTool}`} 
+                      onDelete={() => setSelectedTool('')}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              )}
+            </Box>
+          </Fade>
+        </form>
+      </Paper>
+
+      {/* Dashboard Stats Section */}
+      <Grid container spacing={3} sx={{ mt: 4 }}>
+        <Grid item xs={12} md={4}>
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              textAlign: 'center',
+              background: 'linear-gradient(45deg, #3498db 0%, #2980b9 100%)',
+              color: 'white',
+            }}
+          >
+            <DashboardIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Staff Search
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Use the search bar above to find staff members
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12} md={4}>
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              textAlign: 'center',
+              background: 'linear-gradient(45deg, #16a085 0%, #27ae60 100%)',
+              color: 'white',
+            }}
+          >
+            <WorkIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Role Search
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Filter by role to find staff with specific positions
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12} md={4}>
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              textAlign: 'center',
+              background: 'linear-gradient(45deg, #e74c3c 0%, #c0392b 100%)',
+              color: 'white',
+            }}
+          >
+            <BusinessIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Skill Search
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Filter by skill to find staff with specific expertise
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
+  );
+};
+
+export default DashboardPage;

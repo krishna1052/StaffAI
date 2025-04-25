@@ -86,11 +86,11 @@ class DatabaseSetup:
     def create_employees_with_embeddings(self):
         """Create Person nodes with embeddings and their relationships"""
         with self.driver.session() as session:
+            # First pass: Create all employee nodes
             for emp in EMPLOYEES.values():
                 # Generate description and embedding
                 description = self.generate_profile_description(emp)
                 embedding = self.generate_embedding(description)
-                embedding_str = ','.join(map(str, embedding))
                 
                 # Create Person node with embedding
                 session.run("""
@@ -101,11 +101,11 @@ class DatabaseSetup:
                         grade: $grade,
                         office: $office,
                         description: $description,
-                        embedding: $embedding_str
+                        embedding: $embedding
                     })
-                """, **emp, description=description, embedding_str=embedding_str)
+                """, **emp, description=description, embedding=embedding)
 
-                # Create relationships
+                # Create relationships with roles and tools
                 for role in emp['can_play']:
                     session.run("""
                         MATCH (p:Person {emp_id: $emp_id})
@@ -122,7 +122,17 @@ class DatabaseSetup:
                 
                 print(f"✓ Created employee {emp['name']} with embedding")
             
+            # Second pass: Create relationships between similar employees
+            session.run("""
+                MATCH (p1:Person), (p2:Person)
+                WHERE p1.emp_id < p2.emp_id
+                WITH p1, p2, gds.similarity.cosine(p1.embedding, p2.embedding) AS similarity
+                WHERE similarity > 0.8
+                CREATE (p1)-[:SIMILAR_TO {score: similarity}]->(p2)
+            """)
+            
             print("✓ Employees created with relationships and embeddings")
+            print("✓ Similar employee relationships created")
 
     def create_demands_with_embeddings(self, demand=None):
         """Create Demand nodes with embeddings and their relationships"""
@@ -166,7 +176,7 @@ class DatabaseSetup:
                 
                 print(f"✓ Created demand {demand['id']} with embedding")
                 print(f"Embedding: {embedding}, embedding: {embedding}")
-                return 
+                return demand['id']
                 
             else: 
                 for demand in DEMANDS.values():
@@ -209,7 +219,7 @@ class DatabaseSetup:
                 MATCH (p:Person)
                 RETURN p.emp_id as emp_id, 
                        p.name as name,
-                       size(split(p.embedding, ',')) as embedding_length,
+                       size(p.embedding) as embedding_length,
                        p.description as description
                 LIMIT 1
             """)

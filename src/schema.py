@@ -15,7 +15,8 @@ LABELS = {
 RELATIONSHIPS = {
     'CAN_PLAY': 'CAN_PLAY',    # Person to Role
     'HAS_SKILL': 'HAS_SKILL',  # Person to Tool (with rating property)
-    'REQUIRES': 'REQUIRES'      # Demand to Role
+    'REQUIRES': 'REQUIRES',     # Demand to Role
+    'SIMILAR_TO': 'SIMILAR_TO'  # Demand to Demand (for similar roles)
 }
 
 # Schema creation queries
@@ -99,4 +100,5 @@ CREATE (d:Demand {
 CREATE (p)-[:CAN_PLAY]->(r)
 CREATE (p)-[:HAS_SKILL {rating: integer}]->(t)
 CREATE (d)-[:REQUIRES]->(r)
+CREATE (d1:Demand)-[:SIMILAR_TO {similarity: float}]->(d2:Demand)
 """

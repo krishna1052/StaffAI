@@ -5,8 +5,8 @@ Combined script to generate descriptions, create embeddings, and populate the da
 from typing import Dict, Any, List
 from neo4j import GraphDatabase
 from sentence_transformers import SentenceTransformer
-from data.sample_data import EMPLOYEES, DEMANDS, ROLES, TOOLS
-from schema import SCHEMA_QUERIES
+from src.data.sample_data import EMPLOYEES, DEMANDS, ROLES, TOOLS
+from src.schema import SCHEMA_QUERIES
 
 class DatabaseSetup:
     def __init__(self, 
@@ -124,10 +124,19 @@ class DatabaseSetup:
             
             print("✓ Employees created with relationships and embeddings")
 
-    def create_demands_with_embeddings(self):
+    def create_demands_with_embeddings(self, demand=None):
         """Create Demand nodes with embeddings and their relationships"""
         with self.driver.session() as session:
-            for demand in DEMANDS.values():
+            if demand and isinstance(demand, dict):
+                # Get the last demand ID and increment
+                last_id_result = session.run("""
+                    MATCH (d:Demand) 
+                    RETURN COALESCE(MAX(toInteger(d.id)), 0) as last_id
+                """)
+                last_id = last_id_result.single()["last_id"]
+                new_id = str(last_id + 1)
+                demand['id'] = new_id
+
                 # Generate description and embedding
                 description = self.generate_demand_description(demand)
                 embedding = self.generate_embedding(description)
@@ -156,8 +165,39 @@ class DatabaseSetup:
                 """, id=demand['id'], role=demand['role'])
                 
                 print(f"✓ Created demand {demand['id']} with embedding")
-            
-            print("✓ Demands created with relationships and embeddings")
+                
+            else: 
+                for demand in DEMANDS.values():
+                    # Generate description and embedding
+                    description = self.generate_demand_description(demand)
+                    embedding = self.generate_embedding(description)
+                    embedding_str = ','.join(map(str, embedding))
+                    
+                    # Create Demand node with embedding
+                    session.run("""
+                        CREATE (d:Demand {
+                            id: $id,
+                            role: $role,
+                            grade: $grade,
+                            start_date: $start_date,
+                            end_date: $end_date,
+                            office: $office,
+                            job_description: $job_description,
+                            description: $description,
+                            embedding: $embedding_str
+                        })
+                    """, **demand, description=description, embedding_str=embedding_str)
+
+                    # Create REQUIRES relationship
+                    session.run("""
+                        MATCH (d:Demand {id: $id})
+                        MATCH (r:Role {name: $role})
+                        CREATE (d)-[:REQUIRES]->(r)
+                    """, id=demand['id'], role=demand['role'])
+                    
+                    print(f"✓ Created demand {demand['id']} with embedding")
+                
+                print("✓ Demands created with relationships and embeddings")
 
     def validate_data(self):
         """Validate that nodes and embeddings were stored correctly."""

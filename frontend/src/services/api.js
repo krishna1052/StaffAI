@@ -56,20 +56,230 @@ export const searchProfiles = async (query) => {
  */
 export const searchProfilesWithFilters = async (filters) => {
   try {
-    const params = new URLSearchParams();
-    
-    // Add all non-empty filters to query parameters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        params.append(key, value);
+    // Use the basic search endpoint if there's a query
+    if (filters.query) {
+      const response = await fetch(`${API_URL}/profiles/search?query=${encodeURIComponent(filters.query)}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-    });
-    
-    const response = await fetch(`${API_URL}/profiles/advanced-search?${params.toString()}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      
+      // Get search results
+      let results = await response.json();
+      
+      // Filter the results based on other criteria
+      if (filters.role) {
+        results = results.filter(profile => profile.role === filters.role);
+      }
+      
+      if (filters.skill) {
+        results = results.filter(profile => 
+          profile.description && profile.description.toLowerCase().includes(filters.skill.toLowerCase())
+        );
+      }
+      
+      if (filters.grade) {
+        results = results.filter(profile => profile.grade === filters.grade);
+      }
+      
+      if (filters.office) {
+        results = results.filter(profile => profile.office === filters.office);
+      }
+      
+      // Handle job description filter
+      if (filters.jobDescription) {
+        results = results.filter(profile => 
+          profile.description && profile.description.toLowerCase().includes(filters.jobDescription.toLowerCase())
+        );
+      }
+      
+      // Handle date filtering if supported in the profile data
+      if (filters.startDate || filters.endDate) {
+        results = results.filter(profile => {
+          let matchesDateRange = true;
+          const profileStartDate = profile.start_date ? new Date(profile.start_date) : null;
+          const profileEndDate = profile.end_date ? new Date(profile.end_date) : null;
+          
+          if (filters.startDate && profileStartDate) {
+            const filterStartDate = new Date(filters.startDate);
+            if (profileStartDate < filterStartDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          if (filters.endDate && profileEndDate) {
+            const filterEndDate = new Date(filters.endDate);
+            if (profileEndDate > filterEndDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          return matchesDateRange;
+        });
+      }
+      
+      return results;
+    } else if (filters.role) {
+      // If no query but has role filter, use role endpoint
+      const response = await fetch(`${API_URL}/profiles/role/${encodeURIComponent(filters.role)}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      // Get results and apply other filters
+      let results = await response.json();
+      
+      // Apply remaining filters
+      if (filters.skill) {
+        results = results.filter(profile => 
+          profile.description && profile.description.toLowerCase().includes(filters.skill.toLowerCase())
+        );
+      }
+      
+      if (filters.grade) {
+        results = results.filter(profile => profile.grade === filters.grade);
+      }
+      
+      if (filters.office) {
+        results = results.filter(profile => profile.office === filters.office);
+      }
+      
+      // Handle remaining filters as above
+      if (filters.jobDescription) {
+        results = results.filter(profile => 
+          profile.description && profile.description.toLowerCase().includes(filters.jobDescription.toLowerCase())
+        );
+      }
+      
+      // Date filtering
+      if (filters.startDate || filters.endDate) {
+        results = results.filter(profile => {
+          let matchesDateRange = true;
+          const profileStartDate = profile.start_date ? new Date(profile.start_date) : null;
+          const profileEndDate = profile.end_date ? new Date(profile.end_date) : null;
+          
+          if (filters.startDate && profileStartDate) {
+            const filterStartDate = new Date(filters.startDate);
+            if (profileStartDate < filterStartDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          if (filters.endDate && profileEndDate) {
+            const filterEndDate = new Date(filters.endDate);
+            if (profileEndDate > filterEndDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          return matchesDateRange;
+        });
+      }
+      
+      return results;
+    } else if (filters.skill) {
+      // If has skill filter, use tool endpoint
+      const response = await fetch(`${API_URL}/profiles/tool/${encodeURIComponent(filters.skill)}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      // Get results and apply other filters
+      let results = await response.json();
+      
+      // Apply remaining filters
+      if (filters.grade) {
+        results = results.filter(profile => profile.grade === filters.grade);
+      }
+      
+      if (filters.office) {
+        results = results.filter(profile => profile.office === filters.office);
+      }
+      
+      // Handle remaining filters as above
+      if (filters.jobDescription) {
+        results = results.filter(profile => 
+          profile.description && profile.description.toLowerCase().includes(filters.jobDescription.toLowerCase())
+        );
+      }
+      
+      // Date filtering
+      if (filters.startDate || filters.endDate) {
+        results = results.filter(profile => {
+          let matchesDateRange = true;
+          const profileStartDate = profile.start_date ? new Date(profile.start_date) : null;
+          const profileEndDate = profile.end_date ? new Date(profile.end_date) : null;
+          
+          if (filters.startDate && profileStartDate) {
+            const filterStartDate = new Date(filters.startDate);
+            if (profileStartDate < filterStartDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          if (filters.endDate && profileEndDate) {
+            const filterEndDate = new Date(filters.endDate);
+            if (profileEndDate > filterEndDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          return matchesDateRange;
+        });
+      }
+      
+      return results;
+    } else {
+      // If no specific filters that match endpoints, get all profiles and filter client-side
+      const response = await fetch(`${API_URL}/profiles`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      // Get all profiles
+      let results = await response.json();
+      
+      // Apply all filters
+      if (filters.grade) {
+        results = results.filter(profile => profile.grade === filters.grade);
+      }
+      
+      if (filters.office) {
+        results = results.filter(profile => profile.office === filters.office);
+      }
+      
+      if (filters.jobDescription) {
+        results = results.filter(profile => 
+          profile.description && profile.description.toLowerCase().includes(filters.jobDescription.toLowerCase())
+        );
+      }
+      
+      // Date filtering
+      if (filters.startDate || filters.endDate) {
+        results = results.filter(profile => {
+          let matchesDateRange = true;
+          const profileStartDate = profile.start_date ? new Date(profile.start_date) : null;
+          const profileEndDate = profile.end_date ? new Date(profile.end_date) : null;
+          
+          if (filters.startDate && profileStartDate) {
+            const filterStartDate = new Date(filters.startDate);
+            if (profileStartDate < filterStartDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          if (filters.endDate && profileEndDate) {
+            const filterEndDate = new Date(filters.endDate);
+            if (profileEndDate > filterEndDate) {
+              matchesDateRange = false;
+            }
+          }
+          
+          return matchesDateRange;
+        });
+      }
+      
+      return results;
     }
-    return await response.json();
   } catch (error) {
     console.error('Error searching profiles with filters:', error);
     throw error;

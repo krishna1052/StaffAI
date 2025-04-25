@@ -140,7 +140,7 @@ class DatabaseSetup:
                 # Generate description and embedding
                 description = self.generate_demand_description(demand)
                 embedding = self.generate_embedding(description)
-                embedding_str = ','.join(map(str, embedding))
+                # embedding_str = ','.join(map(str, embedding))
                 
                 # Create Demand node with embedding
                 session.run("""
@@ -153,9 +153,9 @@ class DatabaseSetup:
                         office: $office,
                         job_description: $job_description,
                         description: $description,
-                        embedding: $embedding_str
+                        embedding: $embedding
                     })
-                """, **demand, description=description, embedding_str=embedding_str)
+                """, **demand, description=description, embedding=embedding)
 
                 # Create REQUIRES relationship
                 session.run("""
@@ -165,13 +165,15 @@ class DatabaseSetup:
                 """, id=demand['id'], role=demand['role'])
                 
                 print(f"✓ Created demand {demand['id']} with embedding")
+                print(f"Embedding: {embedding}, embedding: {embedding}")
+                return 
                 
             else: 
                 for demand in DEMANDS.values():
                     # Generate description and embedding
                     description = self.generate_demand_description(demand)
                     embedding = self.generate_embedding(description)
-                    embedding_str = ','.join(map(str, embedding))
+                    # embedding_str = ','.join(map(str, embedding))
                     
                     # Create Demand node with embedding
                     session.run("""
@@ -184,9 +186,9 @@ class DatabaseSetup:
                             office: $office,
                             job_description: $job_description,
                             description: $description,
-                            embedding: $embedding_str
+                            embedding: $embedding
                         })
-                    """, **demand, description=description, embedding_str=embedding_str)
+                    """, **demand, description=description, embedding=embedding)
 
                     # Create REQUIRES relationship
                     session.run("""
@@ -217,7 +219,7 @@ class DatabaseSetup:
             demand_result = session.run("""
                 MATCH (d:Demand)
                 RETURN d.id as id,
-                       size(split(d.embedding, ',')) as embedding_length,
+                       size(d.embedding) as embedding_length,
                        d.description as description
                 LIMIT 1
             """)

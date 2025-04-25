@@ -18,7 +18,9 @@ import {
   Paper,
   Button,
   Fade,
-  useTheme
+  useTheme,
+  Avatar,
+  Divider
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -29,7 +31,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GradingIcon from '@mui/icons-material/Grading';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import DescriptionIcon from '@mui/icons-material/Description';
-import { getRoles, getTools } from '../services/api';
+import { getRoles, getTools, sendMessages } from '../services/api';
 
 // Helper function to parse query parameters
 const useQuery = () => {
@@ -51,6 +53,9 @@ const DashboardPage = () => {
   const [selectedRole, setSelectedRole] = useState('');
   const [selectedTool, setSelectedTool] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [hasFiltered, setHasFiltered] = useState(false);
+  const [startingConversation, setStartingConversation] = useState(false);
   
   // New state for additional filter fields
   const [grade, setGrade] = useState('');
@@ -81,8 +86,10 @@ const DashboardPage = () => {
     fetchData();
   }, []);
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
     
     // Build query parameters
     const params = new URLSearchParams();
@@ -119,8 +126,89 @@ const DashboardPage = () => {
       params.append('jobDescription', jobDescription);
     }
     
-    // Navigate with all query parameters
+    // Update URL with query parameters
     navigate(`/?${params.toString()}`);
+    
+    try {
+      // Create filters object for API call
+      const filters = {
+        query: searchQuery.trim(),
+        role: selectedRole,
+        skill: selectedTool,
+        grade: grade,
+        office: office,
+        startDate: startDate,
+        endDate: endDate,
+        jobDescription: jobDescription
+      };
+      
+      // Mock search results for demonstration
+      // In a real app, we would use the searchProfilesWithFilters API
+      // const results = await searchProfilesWithFilters(filters);
+      
+      // Mock data for demonstration
+      const mockResults = [
+        {
+          id: '1',
+          name: 'John Smith',
+          role: 'Frontend Developer',
+          skills: ['React', 'JavaScript', 'CSS'],
+          grade: 'Senior Consultant',
+          office: 'London'
+        },
+        {
+          id: '2',
+          name: 'Sarah Johnson',
+          role: 'UI/UX Designer',
+          skills: ['Figma', 'Adobe XD', 'User Research'],
+          grade: 'Consultant',
+          office: 'New York'
+        },
+        {
+          id: '3',
+          name: 'Michael Chen',
+          role: 'Backend Developer',
+          skills: ['Node.js', 'Express', 'MongoDB'],
+          grade: 'Manager',
+          office: 'Singapore'
+        }
+      ];
+      
+      setSearchResults(mockResults);
+      setHasFiltered(true);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to search profiles. Please try again.');
+      console.error(err);
+      setLoading(false);
+    }
+  };
+  
+  const handleStartConversation = async () => {
+    if (searchResults.length === 0) return;
+    
+    setStartingConversation(true);
+    try {
+      // Get profile IDs from search results
+      const profileIds = searchResults.map(profile => profile.id);
+      
+      // Determine role to offer based on filters
+      const roleToOffer = selectedRole || "Available Position";
+      
+      // In a real app, we would call the API
+      // await sendMessages(profileIds, roleToOffer, jobDescription);
+      
+      // For demonstration, use setTimeout to simulate API call
+      setTimeout(() => {
+        // Navigate to messages page after sending
+        navigate('/messages');
+        setStartingConversation(false);
+      }, 1500);
+    } catch (err) {
+      setError('Failed to start conversation. Please try again.');
+      console.error(err);
+      setStartingConversation(false);
+    }
   };
 
   const handleRoleChange = (event) => {
@@ -511,68 +599,201 @@ const DashboardPage = () => {
         </form>
       </Paper>
 
-      {/* Dashboard Stats Section */}
-      <Grid container spacing={3} sx={{ mt: 4 }}>
-        <Grid item xs={12} md={4}>
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              textAlign: 'center',
-              background: 'linear-gradient(45deg, #3498db 0%, #2980b9 100%)',
-              color: 'white',
-            }}
-          >
-            <DashboardIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Staff Search
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Use the search bar above to find staff members
-            </Typography>
-          </Paper>
+      {/* Dashboard Stats or Search Results Section */}
+      {!hasFiltered ? (
+        // Show dashboard stats when no search has been performed
+        <Grid container spacing={3} sx={{ mt: 4 }}>
+          <Grid item xs={12} md={4}>
+            <Paper
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'linear-gradient(45deg, #3498db 0%, #2980b9 100%)',
+                color: 'white',
+              }}
+            >
+              <DashboardIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                Staff Search
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Use the search bar above to find staff members
+              </Typography>
+            </Paper>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Paper
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'linear-gradient(45deg, #16a085 0%, #27ae60 100%)',
+                color: 'white',
+              }}
+            >
+              <WorkIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                Role Search
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Filter by role to find staff with specific positions
+              </Typography>
+            </Paper>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Paper
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                textAlign: 'center',
+                background: 'linear-gradient(45deg, #e74c3c 0%, #c0392b 100%)',
+                color: 'white',
+              }}
+            >
+              <BusinessIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                Skill Search
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Filter by skill to find staff with specific expertise
+              </Typography>
+            </Paper>
+          </Grid>
         </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              textAlign: 'center',
-              background: 'linear-gradient(45deg, #16a085 0%, #27ae60 100%)',
-              color: 'white',
-            }}
-          >
-            <WorkIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Role Search
+      ) : (
+        // Show search results when search has been performed
+        <Box sx={{ mt: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" component="h2" fontWeight="600">
+              Search Results
             </Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Filter by role to find staff with specific positions
-            </Typography>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              textAlign: 'center',
-              background: 'linear-gradient(45deg, #e74c3c 0%, #c0392b 100%)',
-              color: 'white',
-            }}
-          >
-            <BusinessIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Skill Search
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Filter by skill to find staff with specific expertise
-            </Typography>
-          </Paper>
-        </Grid>
-      </Grid>
+            
+            {/* Start Conversation Button */}
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleStartConversation}
+              disabled={startingConversation || searchResults.length === 0}
+              startIcon={startingConversation ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{
+                borderRadius: 2,
+                py: 1,
+                px: 3,
+                boxShadow: '0 4px 10px rgba(44, 62, 80, 0.15)',
+                background: 'linear-gradient(45deg, #16a085 0%, #27ae60 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #1abc9c 0%, #2ecc71 100%)',
+                },
+              }}
+            >
+              {startingConversation ? 'Starting...' : 'Start Conversation'}
+            </Button>
+          </Box>
+          
+          {/* Error message if any */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+          
+          {/* Loading indicator */}
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+          
+          {/* Search results */}
+          {!loading && searchResults.length > 0 ? (
+            <Grid container spacing={3}>
+              {searchResults.map((profile) => (
+                <Grid item xs={12} md={6} lg={4} key={profile.id}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 3,
+                      borderRadius: 3,
+                      border: '1px solid',
+                      borderColor: theme.palette.divider,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        boxShadow: '0 5px 15px rgba(0,0,0,0.08)',
+                        borderColor: theme.palette.primary.light,
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar 
+                        sx={{ 
+                          width: 56, 
+                          height: 56,
+                          mr: 2,
+                          background: `linear-gradient(135deg, #3498db 0%, #2980b9 100%)`
+                        }}
+                      >
+                        {profile.name.charAt(0)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6" fontWeight="600">
+                          {profile.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {profile.role} • {profile.grade}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {profile.office}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Divider sx={{ my: 2 }} />
+                    
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Skills:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {profile.skills?.map((skill, index) => (
+                          <Chip 
+                            key={index} 
+                            label={skill} 
+                            size="small" 
+                            color={skill === selectedTool ? "primary" : "default"}
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          ) : !loading && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                textAlign: 'center',
+                border: '1px dashed',
+                borderColor: theme.palette.divider,
+              }}
+            >
+              <Typography variant="h6" color="text.secondary">
+                No matching results found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Try adjusting your search filters
+              </Typography>
+            </Paper>
+          )}
+        </Box>
+      )}
     </Container>
   );
 };

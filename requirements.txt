@@ -1,0 +1,4 @@
+neo4j>=5.0.0
+sentence-transformers>=2.0.0
+scikit-learn>=1.0.0
+numpy<2.0.0

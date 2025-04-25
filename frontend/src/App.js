@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage';
 import RolesPage from './pages/RolesPage';
 import ToolsPage from './pages/ToolsPage';
 import DashboardPage from './pages/DashboardPage';
+import MessagesPage from './pages/MessagesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Create theme
@@ -332,6 +333,7 @@ function App() {
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/tools" element={<ToolsPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>

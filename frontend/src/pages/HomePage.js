@@ -25,7 +25,14 @@ import {
   Button,
   Tooltip,
   Fade,
-  useTheme
+  useTheme,
+  Modal,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -35,7 +42,13 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import BusinessIcon from '@mui/icons-material/Business';
 import SchoolIcon from '@mui/icons-material/School';
 import StarIcon from '@mui/icons-material/Star';
-import { getProfiles, searchProfiles, vectorSearchProfiles, getRoles, getTools } from '../services/api';
+import GradingIcon from '@mui/icons-material/Grading';
+import DateRangeIcon from '@mui/icons-material/DateRange';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ChatIcon from '@mui/icons-material/Chat';
+import SendIcon from '@mui/icons-material/Send';
+import EmailIcon from '@mui/icons-material/Email';
+import { getProfiles, searchProfiles, searchProfilesWithFilters, vectorSearchProfiles, getRoles, getTools, sendMessages } from '../services/api';
 
 // Helper function to parse query parameters
 const useQuery = () => {
@@ -78,6 +91,13 @@ const HomePage = () => {
   const navigate = useNavigate();
   const query = useQuery();
   const searchParam = query.get('search');
+  const roleParam = query.get('role');
+  const skillParam = query.get('skill');
+  const gradeParam = query.get('grade');
+  const officeParam = query.get('office');
+  const startDateParam = query.get('startDate');
+  const endDateParam = query.get('endDate');
+  const jobDescriptionParam = query.get('jobDescription');
 
   const [profiles, setProfiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState(searchParam || '');
@@ -86,9 +106,28 @@ const HomePage = () => {
   const [searchType, setSearchType] = useState('text'); // 'text' or 'vector'
   const [roles, setRoles] = useState([]);
   const [tools, setTools] = useState([]);
-  const [selectedRole, setSelectedRole] = useState('');
-  const [selectedTool, setSelectedTool] = useState('');
+  const [selectedRole, setSelectedRole] = useState(roleParam || '');
+  const [selectedTool, setSelectedTool] = useState(skillParam || '');
   const [filterOpen, setFilterOpen] = useState(false);
+  
+  // New state for additional filter fields
+  const [grade, setGrade] = useState(gradeParam || '');
+  const [startDate, setStartDate] = useState(startDateParam || '');
+  const [endDate, setEndDate] = useState(endDateParam || '');
+  const [office, setOffice] = useState(officeParam || '');
+  const [jobDescription, setJobDescription] = useState(jobDescriptionParam || '');
+  
+  // States for profile selection and messaging
+  const [selectedProfiles, setSelectedProfiles] = useState([]);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [roleInput, setRoleInput] = useState('');
+  const [additionalMessage, setAdditionalMessage] = useState('');
+  const [messageSending, setMessageSending] = useState(false);
+  const [messageSent, setMessageSent] = useState(false);
+  
+  // Sample grades and offices (replace with API data in production)
+  const grades = ['Associate', 'Consultant', 'Senior Consultant', 'Manager', 'Senior Manager', 'Director'];
+  const offices = ['New York', 'London', 'Tokyo', 'Singapore', 'Sydney', 'Berlin', 'Paris'];
 
   // Fetch profiles on component mount or when search param changes
   useEffect(() => {
@@ -96,8 +135,21 @@ const HomePage = () => {
       setLoading(true);
       try {
         let results;
-        if (searchParam) {
-          results = await searchProfiles(searchParam);
+        // Use filters if they exist
+        if (searchParam || roleParam || skillParam || gradeParam || officeParam || startDateParam || endDateParam || jobDescriptionParam) {
+          // Collect all query parameters
+          const filters = {
+            query: searchParam,
+            role: roleParam,
+            skill: skillParam,
+            grade: gradeParam,
+            office: officeParam,
+            startDate: startDateParam,
+            endDate: endDateParam,
+            jobDescription: jobDescriptionParam
+          };
+          
+          results = await searchProfilesWithFilters(filters);
         } else {
           results = await getProfiles();
         }
@@ -117,7 +169,63 @@ const HomePage = () => {
     };
 
     fetchData();
-  }, [searchParam]);
+  }, [searchParam, roleParam, skillParam, gradeParam, officeParam, startDateParam, endDateParam, jobDescriptionParam]);
+
+  // Handle profile selection for messaging
+  const handleProfileSelection = (profile) => {
+    const isSelected = selectedProfiles.some(p => p.emp_id === profile.emp_id);
+    if (isSelected) {
+      // Remove from selection
+      setSelectedProfiles(selectedProfiles.filter(p => p.emp_id !== profile.emp_id));
+    } else {
+      // Add to selection
+      setSelectedProfiles([...selectedProfiles, profile]);
+    }
+  };
+
+  // Open message dialog
+  const handleOpenMessageDialog = () => {
+    setMessageDialogOpen(true);
+    setRoleInput(selectedRole || '');
+    setMessageSent(false);
+  };
+
+  // Close message dialog
+  const handleCloseMessageDialog = () => {
+    setMessageDialogOpen(false);
+    setRoleInput('');
+    setAdditionalMessage('');
+    setMessageSent(false);
+  };
+
+  // Send message to selected profiles
+  const handleSendMessage = async () => {
+    setMessageSending(true);
+    setError(null);
+    
+    try {
+      // Extract profile IDs from selected profiles
+      const profileIds = selectedProfiles.map(profile => profile.emp_id);
+      
+      // Send message using API
+      await sendMessages(profileIds, roleInput, additionalMessage);
+      
+      setMessageSending(false);
+      setMessageSent(true);
+      
+      // After successful send, close dialog after a short delay
+      setTimeout(() => {
+        setMessageDialogOpen(false);
+        setSelectedProfiles([]);
+        setRoleInput('');
+        setAdditionalMessage('');
+      }, 2000);
+    } catch (err) {
+      setMessageSending(false);
+      setError('Failed to send messages. Please try again later.');
+      console.error('Error sending messages:', err);
+    }
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -126,16 +234,41 @@ const HomePage = () => {
     
     try {
       let results;
+      // Collect all filters
+      const filters = {
+        query: searchQuery.trim(),
+        role: selectedRole,
+        skill: selectedTool,
+        grade: grade,
+        office: office,
+        startDate: startDate,
+        endDate: endDate,
+        jobDescription: jobDescription
+      };
+      
+      // Use vector search or filtered search based on search type
       if (searchType === 'vector' && searchQuery.trim()) {
         results = await vectorSearchProfiles(searchQuery);
-      } else if (searchQuery.trim()) {
-        results = await searchProfiles(searchQuery);
-        // Update URL with search query
-        navigate(`/?search=${encodeURIComponent(searchQuery)}`);
       } else {
-        results = await getProfiles();
-        navigate('/');
+        results = await searchProfilesWithFilters(filters);
       }
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      // Add all non-empty filters to query parameters
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) {
+          // Convert 'query' param to 'search' for URL consistency
+          const paramName = key === 'query' ? 'search' : key;
+          params.append(paramName, value);
+        }
+      });
+      
+      // Navigate with all query parameters
+      const queryString = params.toString();
+      navigate(queryString ? `/?${queryString}` : '/');
+      
       setProfiles(results);
     } catch (err) {
       setError('Search failed. Please try again.');
@@ -160,24 +293,19 @@ const HomePage = () => {
   const toggleFilter = () => {
     setFilterOpen(!filterOpen);
   };
+  
+  const clearAllFilters = () => {
+    setSelectedRole('');
+    setSelectedTool('');
+    setGrade('');
+    setStartDate('');
+    setEndDate('');
+    setOffice('');
+    setJobDescription('');
+  };
 
-  // Filter profiles based on selected role and tool
-  const filteredProfiles = profiles.filter(profile => {
-    let matchesRole = true;
-    let matchesTool = true;
-    
-    if (selectedRole) {
-      // This is a simplified filter - in reality, we'd need to fetch the roles for each profile
-      matchesRole = profile.role === selectedRole;
-    }
-    
-    if (selectedTool) {
-      // This is a simplified filter - in reality, we'd need to fetch the tools for each profile
-      matchesTool = profile.description?.toLowerCase().includes(selectedTool.toLowerCase());
-    }
-    
-    return matchesRole && matchesTool;
-  });
+  // Use the profiles directly since they've already been filtered by the API
+  const filteredProfiles = profiles;
 
   // Skill level mappings for badges
   const getSkillLevel = (similarity) => {
@@ -326,6 +454,7 @@ const HomePage = () => {
             <Fade in={filterOpen}>
               <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${theme.palette.divider}` }}>
                 <Grid container spacing={3}>
+                  {/* Row 1: Role and Skill */}
                   <Grid item xs={12} md={6}>
                     <FormControl fullWidth variant="outlined">
                       <InputLabel id="role-filter-label">Filter by Role</InputLabel>
@@ -370,10 +499,116 @@ const HomePage = () => {
                       </Select>
                     </FormControl>
                   </Grid>
+                  
+                  {/* Row 2: Grade and Office */}
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel id="grade-filter-label">Grade</InputLabel>
+                      <Select
+                        labelId="grade-filter-label"
+                        value={grade}
+                        onChange={(e) => setGrade(e.target.value)}
+                        label="Grade"
+                        sx={{ borderRadius: 3 }}
+                        startAdornment={<GradingIcon color="action" sx={{ ml: 1, mr: 1 }} />}
+                      >
+                        <MenuItem value="">
+                          <em>All Grades</em>
+                        </MenuItem>
+                        {grades.map((g) => (
+                          <MenuItem key={g} value={g}>
+                            {g}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel id="office-filter-label">Office</InputLabel>
+                      <Select
+                        labelId="office-filter-label"
+                        value={office}
+                        onChange={(e) => setOffice(e.target.value)}
+                        label="Office"
+                        sx={{ borderRadius: 3 }}
+                        startAdornment={<LocationOnIcon color="action" sx={{ ml: 1, mr: 1 }} />}
+                      >
+                        <MenuItem value="">
+                          <em>All Offices</em>
+                        </MenuItem>
+                        {offices.map((o) => (
+                          <MenuItem key={o} value={o}>
+                            {o}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  {/* Row 3: Start Date and End Date */}
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Start Date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <DateRangeIcon color="action" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ borderRadius: 3 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="End Date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <DateRangeIcon color="action" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ borderRadius: 3 }}
+                    />
+                  </Grid>
+                  
+                  {/* Row 4: Job Description */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Job Description"
+                      multiline
+                      rows={2}
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      placeholder="Enter job description or keywords..."
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <DescriptionIcon color="action" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ borderRadius: 3 }}
+                    />
+                  </Grid>
                 </Grid>
                 
-                {(selectedRole || selectedTool) && (
-                  <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {/* Active filters display */}
+                {(selectedRole || selectedTool || grade || startDate || endDate || office || jobDescription) && (
+                  <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Typography variant="body2" sx={{ mr: 1, color: 'text.secondary' }}>
                       Active filters:
                     </Typography>
@@ -395,6 +630,61 @@ const HomePage = () => {
                         variant="outlined"
                       />
                     )}
+                    {grade && (
+                      <Chip 
+                        label={`Grade: ${grade}`} 
+                        onDelete={() => setGrade('')}
+                        size="small"
+                        color="info"
+                        variant="outlined"
+                      />
+                    )}
+                    {office && (
+                      <Chip 
+                        label={`Office: ${office}`} 
+                        onDelete={() => setOffice('')}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
+                    )}
+                    {startDate && (
+                      <Chip 
+                        label={`Start: ${startDate}`} 
+                        onDelete={() => setStartDate('')}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                      />
+                    )}
+                    {endDate && (
+                      <Chip 
+                        label={`End: ${endDate}`} 
+                        onDelete={() => setEndDate('')}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                      />
+                    )}
+                    {jobDescription && (
+                      <Chip 
+                        label="Job Description" 
+                        onDelete={() => setJobDescription('')}
+                        size="small"
+                        color="default"
+                        variant="outlined"
+                      />
+                    )}
+                    
+                    <Button 
+                      size="small" 
+                      onClick={clearAllFilters}
+                      variant="text" 
+                      color="primary"
+                      sx={{ ml: 'auto' }}
+                    >
+                      Clear All
+                    </Button>
                   </Box>
                 )}
               </Box>
@@ -458,6 +748,23 @@ const HomePage = () => {
                     pt: 4
                   }}
                 >
+                  {/* Selection checkbox */}
+                  <Checkbox
+                    checked={selectedProfiles.some(p => p.emp_id === profile.emp_id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleProfileSelection(profile);
+                    }}
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 8, 
+                      right: 8, 
+                      zIndex: 2,
+                      '& .MuiSvgIcon-root': { fontSize: 20 }
+                    }}
+                    color="primary"
+                  />
+
                   {/* Avatar positioned half-above the card */}
                   <Box sx={{ 
                     display: 'flex',
@@ -643,8 +950,7 @@ const HomePage = () => {
                   variant="outlined" 
                   onClick={() => {
                     setSearchQuery('');
-                    setSelectedRole('');
-                    setSelectedTool('');
+                    clearAllFilters();
                     navigate('/');
                   }}
                   sx={{ borderRadius: 3 }}
@@ -656,6 +962,166 @@ const HomePage = () => {
           )}
         </Grid>
       )}
+      
+      {/* Start Conversation Button - shows when profiles are selected */}
+      {selectedProfiles.length > 0 && (
+        <Box sx={{ 
+          position: 'sticky', 
+          bottom: 20, 
+          display: 'flex', 
+          justifyContent: 'center', 
+          mt: 3, 
+          zIndex: 10 
+        }}>
+          <Paper
+            elevation={3}
+            sx={{
+              borderRadius: 8,
+              py: 2,
+              px: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              bgcolor: 'primary.main',
+              color: 'white',
+              boxShadow: '0 8px 32px rgba(44, 62, 80, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              width: { xs: '95%', sm: 450 }
+            }}
+          >
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                {selectedProfiles.length} {selectedProfiles.length === 1 ? 'profile' : 'profiles'} selected
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.8, fontSize: '0.85rem' }}>
+                Send a message to the selected staff
+              </Typography>
+            </Box>
+            <Button 
+              variant="contained" 
+              color="secondary" 
+              onClick={handleOpenMessageDialog}
+              startIcon={<ChatIcon />}
+              sx={{ 
+                borderRadius: 4,
+                boxShadow: theme.shadows[5],
+                py: 1,
+                fontSize: '0.9rem'
+              }}
+            >
+              Start Conversation
+            </Button>
+          </Paper>
+        </Box>
+      )}
+      
+      {/* Message Dialog */}
+      <Dialog
+        open={messageDialogOpen}
+        onClose={handleCloseMessageDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <EmailIcon sx={{ mr: 1, color: theme.palette.secondary.main }} />
+            <Typography variant="h6" component="div">
+              Send Message to Selected Staff
+            </Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pt: 3 }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Selected Recipients ({selectedProfiles.length}):
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {selectedProfiles.map(profile => (
+                <Chip 
+                  key={profile.emp_id}
+                  avatar={
+                    <Avatar sx={{ bgcolor: gradientColors[getAvatarColor(profile.name)] }}>
+                      {getInitials(profile.name)}
+                    </Avatar>
+                  }
+                  label={profile.name}
+                  variant="outlined"
+                  onDelete={() => handleProfileSelection(profile)}
+                />
+              ))}
+            </Box>
+          </Box>
+          
+          <TextField
+            fullWidth
+            label="Role Being Offered"
+            value={roleInput}
+            onChange={(e) => setRoleInput(e.target.value)}
+            margin="normal"
+            variant="outlined"
+            required
+          />
+          
+          <TextField
+            fullWidth
+            label="Additional Message (Optional)"
+            value={additionalMessage}
+            onChange={(e) => setAdditionalMessage(e.target.value)}
+            margin="normal"
+            variant="outlined"
+            multiline
+            rows={4}
+            placeholder="Include any additional details about the role..."
+          />
+          
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body1">
+              Preview message:
+            </Typography>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 2, 
+                mt: 1,
+                bgcolor: 'rgba(0, 0, 0, 0.02)',
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="body1" paragraph>
+                There is a role <strong>{roleInput || '[Role name]'}</strong> - are you willing to join the project?
+              </Typography>
+              {additionalMessage && (
+                <Typography variant="body2" color="text.secondary">
+                  {additionalMessage}
+                </Typography>
+              )}
+            </Paper>
+          </Box>
+          
+          {messageSent && (
+            <Alert severity="success" sx={{ mt: 3 }}>
+              Messages sent successfully!
+            </Alert>
+          )}
+        </DialogContent>
+        
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCloseMessageDialog} variant="outlined">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSendMessage} 
+            variant="contained" 
+            color="primary" 
+            startIcon={messageSending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+            disabled={!roleInput.trim() || messageSending || messageSent}
+          >
+            {messageSending ? 'Sending...' : messageSent ? 'Sent!' : 'Send Message'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

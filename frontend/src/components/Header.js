@@ -27,6 +27,7 @@ import WorkIcon from '@mui/icons-material/Work';
 import BuildIcon from '@mui/icons-material/Build';
 import BusinessIcon from '@mui/icons-material/Business';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import EmailIcon from '@mui/icons-material/Email';
 
 // Hide app bar on scroll
 const HideOnScroll = ({ children }) => {
@@ -253,6 +254,14 @@ const Header = () => {
               >
                 Dashboard
               </NavButton>
+              <NavButton
+                component={RouterLink}
+                to="/messages"
+                startIcon={<EmailIcon />}
+                active={isActive('/messages')}
+              >
+                Messages
+              </NavButton>
             </Stack>
 
             <Divider orientation="vertical" flexItem sx={{ mx: 2, display: { xs: 'none', md: 'block' }, borderColor: 'rgba(255, 255, 255, 0.15)' }} />
@@ -354,9 +363,14 @@ const Header = () => {
             <Typography variant="body1">Skills</Typography>
           </MenuItem>
           <Divider sx={{ my: 0.5 }} />
-          <MenuItem onClick={() => { navigate('/dashboard'); handleMobileMenuClose(); }}>
+          <MenuItem onClick={() => { navigate('/dashboard'); handleMobileMenuClose(); }} selected={isActive('/dashboard')}>
             <DashboardIcon color="primary" sx={{ mr: 2, fontSize: 20 }} />
             <Typography variant="body1">Dashboard</Typography>
+          </MenuItem>
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem onClick={() => { navigate('/messages'); handleMobileMenuClose(); }} selected={isActive('/messages')}>
+            <EmailIcon color="primary" sx={{ mr: 2, fontSize: 20 }} />
+            <Typography variant="body1">Messages</Typography>
           </MenuItem>
           <Divider sx={{ my: 0.5 }} />
           <MenuItem sx={{ mt: 1 }}>

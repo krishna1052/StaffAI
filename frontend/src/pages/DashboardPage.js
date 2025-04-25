@@ -25,6 +25,10 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import WorkIcon from '@mui/icons-material/Work';
 import BusinessIcon from '@mui/icons-material/Business';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import GradingIcon from '@mui/icons-material/Grading';
+import DateRangeIcon from '@mui/icons-material/DateRange';
+import DescriptionIcon from '@mui/icons-material/Description';
 import { getRoles, getTools } from '../services/api';
 
 // Helper function to parse query parameters
@@ -47,6 +51,17 @@ const DashboardPage = () => {
   const [selectedRole, setSelectedRole] = useState('');
   const [selectedTool, setSelectedTool] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
+  
+  // New state for additional filter fields
+  const [grade, setGrade] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [office, setOffice] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  
+  // Sample grades and offices (replace with API data in production)
+  const grades = ['Associate', 'Consultant', 'Senior Consultant', 'Manager', 'Senior Manager', 'Director'];
+  const offices = ['New York', 'London', 'Tokyo', 'Singapore', 'Sydney', 'Berlin', 'Paris'];
 
   // Fetch roles and tools for filters on component mount
   useEffect(() => {
@@ -69,10 +84,43 @@ const DashboardPage = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     
+    // Build query parameters
+    const params = new URLSearchParams();
+    
     if (searchQuery.trim()) {
-      // When searching from dashboard, navigate to homepage with search query
-      navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+      params.append('search', searchQuery);
     }
+    
+    if (selectedRole) {
+      params.append('role', selectedRole);
+    }
+    
+    if (selectedTool) {
+      params.append('skill', selectedTool);
+    }
+    
+    if (grade) {
+      params.append('grade', grade);
+    }
+    
+    if (startDate) {
+      params.append('startDate', startDate);
+    }
+    
+    if (endDate) {
+      params.append('endDate', endDate);
+    }
+    
+    if (office) {
+      params.append('office', office);
+    }
+    
+    if (jobDescription) {
+      params.append('jobDescription', jobDescription);
+    }
+    
+    // Navigate with all query parameters
+    navigate(`/?${params.toString()}`);
   };
 
   const handleRoleChange = (event) => {
@@ -85,6 +133,16 @@ const DashboardPage = () => {
 
   const toggleFilter = () => {
     setFilterOpen(!filterOpen);
+  };
+  
+  const clearAllFilters = () => {
+    setSelectedRole('');
+    setSelectedTool('');
+    setGrade('');
+    setStartDate('');
+    setEndDate('');
+    setOffice('');
+    setJobDescription('');
   };
 
   return (
@@ -215,6 +273,7 @@ const DashboardPage = () => {
           <Fade in={filterOpen}>
             <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${theme.palette.divider}` }}>
               <Grid container spacing={3}>
+                {/* Row 1: Role and Skill */}
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth variant="outlined">
                     <InputLabel id="role-filter-label">Filter by Role</InputLabel>
@@ -259,10 +318,116 @@ const DashboardPage = () => {
                     </Select>
                   </FormControl>
                 </Grid>
+                
+                {/* Row 2: Grade and Office */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="grade-filter-label">Grade</InputLabel>
+                    <Select
+                      labelId="grade-filter-label"
+                      value={grade}
+                      onChange={(e) => setGrade(e.target.value)}
+                      label="Grade"
+                      sx={{ borderRadius: 3 }}
+                      startAdornment={<GradingIcon color="action" sx={{ ml: 1, mr: 1 }} />}
+                    >
+                      <MenuItem value="">
+                        <em>All Grades</em>
+                      </MenuItem>
+                      {grades.map((g) => (
+                        <MenuItem key={g} value={g}>
+                          {g}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="office-filter-label">Office</InputLabel>
+                    <Select
+                      labelId="office-filter-label"
+                      value={office}
+                      onChange={(e) => setOffice(e.target.value)}
+                      label="Office"
+                      sx={{ borderRadius: 3 }}
+                      startAdornment={<LocationOnIcon color="action" sx={{ ml: 1, mr: 1 }} />}
+                    >
+                      <MenuItem value="">
+                        <em>All Offices</em>
+                      </MenuItem>
+                      {offices.map((o) => (
+                        <MenuItem key={o} value={o}>
+                          {o}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                {/* Row 3: Start Date and End Date */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Start Date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <DateRangeIcon color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ borderRadius: 3 }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="End Date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <DateRangeIcon color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ borderRadius: 3 }}
+                  />
+                </Grid>
+                
+                {/* Row 4: Job Description */}
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Job Description"
+                    multiline
+                    rows={2}
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder="Enter job description or keywords..."
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <DescriptionIcon color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ borderRadius: 3 }}
+                  />
+                </Grid>
               </Grid>
               
-              {(selectedRole || selectedTool) && (
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {/* Active filters display */}
+              {(selectedRole || selectedTool || grade || startDate || endDate || office || jobDescription) && (
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                   <Typography variant="body2" sx={{ mr: 1, color: 'text.secondary' }}>
                     Active filters:
                   </Typography>
@@ -284,6 +449,61 @@ const DashboardPage = () => {
                       variant="outlined"
                     />
                   )}
+                  {grade && (
+                    <Chip 
+                      label={`Grade: ${grade}`} 
+                      onDelete={() => setGrade('')}
+                      size="small"
+                      color="info"
+                      variant="outlined"
+                    />
+                  )}
+                  {office && (
+                    <Chip 
+                      label={`Office: ${office}`} 
+                      onDelete={() => setOffice('')}
+                      size="small"
+                      color="warning"
+                      variant="outlined"
+                    />
+                  )}
+                  {startDate && (
+                    <Chip 
+                      label={`Start: ${startDate}`} 
+                      onDelete={() => setStartDate('')}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                    />
+                  )}
+                  {endDate && (
+                    <Chip 
+                      label={`End: ${endDate}`} 
+                      onDelete={() => setEndDate('')}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                    />
+                  )}
+                  {jobDescription && (
+                    <Chip 
+                      label="Job Description" 
+                      onDelete={() => setJobDescription('')}
+                      size="small"
+                      color="default"
+                      variant="outlined"
+                    />
+                  )}
+                  
+                  <Button 
+                    size="small" 
+                    onClick={clearAllFilters}
+                    variant="text" 
+                    color="primary"
+                    sx={{ ml: 'auto' }}
+                  >
+                    Clear All
+                  </Button>
                 </Box>
               )}
             </Box>

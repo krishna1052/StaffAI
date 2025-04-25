@@ -42,6 +42,41 @@ export const searchProfiles = async (query) => {
 };
 
 /**
+ * Search profiles with advanced filters
+ * @param {Object} filters - Filter parameters
+ * @param {string} filters.query - Search query (optional)
+ * @param {string} filters.role - Role filter (optional)
+ * @param {string} filters.skill - Skill filter (optional)
+ * @param {string} filters.grade - Grade filter (optional)
+ * @param {string} filters.office - Office location filter (optional)
+ * @param {string} filters.startDate - Start date filter (optional)
+ * @param {string} filters.endDate - End date filter (optional)
+ * @param {string} filters.jobDescription - Job description keyword filter (optional)
+ * @returns {Promise<Array>} List of matching profiles
+ */
+export const searchProfilesWithFilters = async (filters) => {
+  try {
+    const params = new URLSearchParams();
+    
+    // Add all non-empty filters to query parameters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        params.append(key, value);
+      }
+    });
+    
+    const response = await fetch(`${API_URL}/profiles/advanced-search?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error searching profiles with filters:', error);
+    throw error;
+  }
+};
+
+/**
  * Search profiles using vector similarity
  * @param {string} query - Search query
  * @param {number} limit - Maximum number of results
@@ -191,6 +226,53 @@ export const createProfile = async (profileData) => {
     return await response.json();
   } catch (error) {
     console.error('Error creating profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Send messages to multiple profiles
+ * @param {Array} profileIds - Array of profile IDs to send messages to
+ * @param {string} roleOffer - The role being offered
+ * @param {string} additionalMessage - Optional additional message content
+ * @returns {Promise<Object>} Message sending status
+ */
+export const sendMessages = async (profileIds, roleOffer, additionalMessage = '') => {
+  try {
+    const response = await fetch(`${API_URL}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        profileIds,
+        roleOffer,
+        additionalMessage
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending messages:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all messages
+ * @returns {Promise<Array>} List of messages
+ */
+export const getMessages = async () => {
+  try {
+    const response = await fetch(`${API_URL}/messages`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching messages:', error);
     throw error;
   }
 };
